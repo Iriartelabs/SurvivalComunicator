@@ -1,0 +1,43 @@
+<resources>
+    <string name="app_name">Survival Comunicator</string>
+    
+    <!-- Menu items -->
+    <string name="menu_chats">Chats</string>
+    <string name="menu_walkie_talkie">Walkie-Talkie</string>
+    <string name="menu_settings">Ajustes</string>
+    
+    <!-- Chat screen -->
+    <string name="hint_message">Escribe un mensaje...</string>
+    <string name="btn_send">Enviar</string>
+    <string name="btn_hold_to_talk">Mantén para hablar</string>
+    
+    <!-- Walkie-talkie screen -->
+    <string name="btn_ptt">PTT</string>
+    <string name="text_transmitting">Transmitiendo...</string>
+    <string name="text_hold_to_transmit">Mantén para transmitir</string>
+    <string name="text_no_users_connected">No hay usuarios conectados</string>
+    <string name="text_users_connected">Usuarios conectados: %1$s</string>
+    <string name="text_receiving_from">Recibiendo de: %1$s</string>
+    
+    <!-- Settings screen -->
+    <string name="title_settings">Configuración</string>
+    <string name="label_username">Nombre de usuario:</string>
+    <string name="hint_username">Tu nombre de usuario</string>
+    <string name="label_server_url">URL del servidor:</string>
+    <string name="hint_server_url">https://tu-servidor.com</string>
+    <string name="label_public_key">Tu clave pública:</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_export_key">Exportar clave</string>
+    <string name="btn_import_key">Importar clave</string>
+    
+    <!-- Error messages -->
+    <string name="error_empty_username">El nombre de usuario no puede estar vacío</string>
+    <string name="error_empty_server_url">La URL del servidor no puede estar vacía</string>
+    <string name="error_loading_chats">Error al cargar los chats: %1$s</string>
+    <string name="error_sending_message">Error al enviar mensaje: %1$s</string>
+    <string name="error_recording">Error en la grabación: %1$s</string>
+    
+    <!-- Success messages -->
+    <string name="success_settings_saved">Configuración guardada</string>
+    <string name="success_key_exported">Clave exportada</string>
+</resources>
