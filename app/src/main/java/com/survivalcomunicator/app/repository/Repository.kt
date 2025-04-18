@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/survivalcomunicator/app/repository/Repository.kt
 package com.survivalcomunicator.app.repository
 
 import com.survivalcomunicator.app.database.MessageDao
@@ -10,43 +11,50 @@ import com.survivalcomunicator.app.models.User
 import com.survivalcomunicator.app.network.NetworkService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class Repository(
     private val messageDao: MessageDao,
     private val userDao: UserDao,
     private val networkService: NetworkService
 ) {
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     // Funciones para usuarios
     suspend fun registerUser(username: String, publicKey: String): User {
-        val user = networkService.registerUser(username, publicKey)
-        saveUser(user)
-        return user
+        return withContext(Dispatchers.IO) {
+            val user = networkService.registerUser(username, publicKey)
+            saveUser(user)
+            user
+        }
     }
     
     suspend fun findUser(username: String): User? {
-        // Primero buscar en la base de datos local
-        val localUser = userDao.getUserByUsername(username)
-        if (localUser != null) {
-            return User(
-                id = localUser.id,
-                username = localUser.username,
-                publicKey = localUser.publicKey,
-                lastSeen = localUser.lastSeen,
-                serverAddress = localUser.serverAddress
-            )
+        return withContext(Dispatchers.IO) {
+            // Primero buscar en la base de datos local
+            val localUser = userDao.getUserByUsername(username)
+            if (localUser != null) {
+                User(
+                    id = localUser.id,
+                    username = localUser.username,
+                    publicKey = localUser.publicKey,
+                    lastSeen = localUser.lastSeen,
+                    serverAddress = localUser.serverAddress
+                )
+            } else {
+                // Si no está localmente, buscar en la red
+                val remoteUser = networkService.findUser(username)
+                if (remoteUser != null) {
+                    saveUser(remoteUser)
+                }
+                remoteUser
+            }
         }
-        
-        // Si no está localmente, buscar en la red
-        val remoteUser = networkService.findUser(username)
-        if (remoteUser != null) {
-            saveUser(remoteUser)
-        }
-        return remoteUser
     }
     
     // Obtener usuario por ID
@@ -78,23 +86,36 @@ class Repository(
     }
     
     // Funciones para mensajes
-    suspend fun sendMessage(message: Message) {
-        // Guardar localmente
-        val messageEntity = MessageEntity(
-            id = message.id,
-            senderId = message.senderId,
-            recipientId = message.recipientId,
-            content = message.content,
-            timestamp = message.timestamp,
-            isRead = message.isRead,
-            isDelivered = message.isDelivered,
-            type = message.type.name
-        )
-        messageDao.insertMessage(messageEntity)
-        
-        // Enviar a través de la red
-        coroutineScope.launch {
-            networkService.sendMessage(message)
+    suspend fun sendMessage(message: Message): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Guardar localmente
+                val messageEntity = MessageEntity(
+                    id = message.id,
+                    senderId = message.senderId,
+                    recipientId = message.recipientId,
+                    content = message.content,
+                    timestamp = message.timestamp,
+                    isRead = message.isRead,
+                    isDelivered = message.isDelivered,
+                    type = message.type.name
+                )
+                messageDao.insertMessage(messageEntity)
+                
+                // Enviar a través de la red
+                val success = networkService.sendMessage(message)
+                
+                if (success) {
+                    // Actualizar el estado del mensaje a "entregado"
+                    val updatedEntity = messageEntity.copy(isDelivered = true)
+                    messageDao.insertMessage(updatedEntity)
+                }
+                
+                success
+            } catch (e: Exception) {
+                // Log del error y retornar falso
+                false
+            }
         }
     }
     
@@ -109,7 +130,11 @@ class Repository(
                     timestamp = entity.timestamp,
                     isRead = entity.isRead,
                     isDelivered = entity.isDelivered,
-                    type = MessageType.valueOf(entity.type)
+                    type = try {
+                        MessageType.valueOf(entity.type)
+                    } catch (e: Exception) {
+                        MessageType.TEXT // Valor por defecto en caso de error
+                    }
                 )
             }
         }
@@ -117,32 +142,46 @@ class Repository(
     
     // Helpers
     private suspend fun saveUser(user: User) {
-        val userEntity = UserEntity(
-            id = user.id,
-            username = user.username,
-            publicKey = user.publicKey,
-            lastSeen = user.lastSeen,
-            serverAddress = user.serverAddress
-        )
-        userDao.insertUser(userEntity)
+        withContext(Dispatchers.IO) {
+            val userEntity = UserEntity(
+                id = user.id,
+                username = user.username,
+                publicKey = user.publicKey,
+                lastSeen = user.lastSeen,
+                serverAddress = user.serverAddress
+            )
+            userDao.insertUser(userEntity)
+        }
     }
     
     // Iniciar escucha de mensajes entrantes
     fun startListeningForMessages() {
-        coroutineScope.launch {
-            networkService.receiveMessages().collect { message ->
-                // Guardar mensaje recibido en la base de datos local
-                val messageEntity = MessageEntity(
-                    id = message.id,
-                    senderId = message.senderId,
-                    recipientId = message.recipientId,
-                    content = message.content,
-                    timestamp = message.timestamp,
-                    isRead = false,
-                    isDelivered = true,
-                    type = message.type.name
-                )
-                messageDao.insertMessage(messageEntity)
+        repositoryScope.launch {
+            try {
+                networkService.receiveMessages()
+                    .catch { e -> 
+                        // Manejar error pero continuar la escucha
+                    }
+                    .collect { message ->
+                        // Guardar mensaje recibido en la base de datos local
+                        val messageEntity = MessageEntity(
+                            id = message.id,
+                            senderId = message.senderId,
+                            recipientId = message.recipientId,
+                            content = message.content,
+                            timestamp = message.timestamp,
+                            isRead = false,
+                            isDelivered = true,
+                            type = message.type.name
+                        )
+                        messageDao.insertMessage(messageEntity)
+                    }
+            } catch (e: Exception) {
+                // Si hay un error en la colección, intentamos reiniciar después de un tiempo
+                repositoryScope.launch {
+                    kotlinx.coroutines.delay(5000) // Esperar 5 segundos antes de reintentar
+                    startListeningForMessages() // Reintentar la conexión
+                }
             }
         }
     }

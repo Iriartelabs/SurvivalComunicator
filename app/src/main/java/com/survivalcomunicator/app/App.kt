@@ -1,5 +1,4 @@
 package com.survivalcomunicator.app
-
 import android.app.Application
 import com.survivalcomunicator.app.database.AppDatabase
 import com.survivalcomunicator.app.network.NetworkServiceImpl
@@ -44,5 +43,11 @@ class App : Application() {
         applicationScope.launch {
             repository.startListeningForMessages()
         }
+    }
+    
+    private fun getServerUrl(): String {
+        // En un escenario real, esto se obtendría de las preferencias
+        // pero para simplificar, usamos un valor por defecto
+        return "https://example.com/api"
     }
 }

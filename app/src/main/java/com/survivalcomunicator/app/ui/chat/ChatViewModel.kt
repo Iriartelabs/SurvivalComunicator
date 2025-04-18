@@ -1,3 +1,4 @@
+// Ruta: app/src/main/java/com/survivalcomunicator/app/ui/chat/ChatViewModel.kt
 package com.survivalcomunicator.app.ui.chat
 
 import android.app.Application
@@ -15,8 +16,12 @@ import com.survivalcomunicator.app.models.User
 import com.survivalcomunicator.app.network.NetworkServiceImpl
 import com.survivalcomunicator.app.repository.Repository
 import com.survivalcomunicator.app.services.AudioRecorderService
-import kotlinx.coroutines.flow.collect
+import com.survivalcomunicator.app.utils.PreferencesManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
@@ -26,6 +31,11 @@ class ChatViewModel(
     private val repository: com.survivalcomunicator.app.repository.Repository
 ) : AndroidViewModel(application) {
     
+    private val database = AppDatabase.getDatabase(application)
+    private val messageDao = database.messageDao()
+    private val userDao = database.userDao()
+    private val networkService = NetworkServiceImpl("https://your-server-url.com") // Cambiar por URL real
+    private val repository = Repository(messageDao, userDao, networkService)
     private val audioRecorderService = AudioRecorderService(application)
     
     private val _messages = MutableLiveData<List<MessageViewModel>>()
@@ -39,19 +49,27 @@ class ChatViewModel(
     
     private var currentUser: User? = null
     private var chatPartner: User? = null
+    private var currentAudioFile: File? = null
     
     init {
-        loadMessages()
         loadUserInfo()
+        loadMessages()
+    }
+
+    private fun getServerUrl(): String {
+        // En una app real, esto sería obtenido de las preferencias
+        return "https://example.com/api"
     }
     
     private fun loadUserInfo() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Intentar obtener el ID del usuario actual desde las preferencias
+                val currentUserId = preferencesManager.getUserId() ?: "current_user_id"
+                
                 // Obtener información del usuario actual (para "mío" vs "suyo")
-                // En una app real, esto vendría de preferencias o sesión
                 currentUser = User(
-                    id = "current_user_id",
+                    id = currentUserId,
                     username = "Mi Usuario",
                     publicKey = "dummy_key"
                 )
@@ -66,12 +84,18 @@ class ChatViewModel(
                         lastSeen = user.lastSeen,
                         serverAddress = user.serverAddress
                     )
-                    _chatTitle.value = user.username
+                    withContext(Dispatchers.Main) {
+                        _chatTitle.value = user.username
+                    }
                 } else {
-                    _chatTitle.value = "Chat"
+                    withContext(Dispatchers.Main) {
+                        _chatTitle.value = "Chat"
+                    }
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "Error al cargar información del usuario: ${e.message}"
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Error al cargar información del usuario: ${e.message}"
+                }
             }
         }
     }
@@ -79,20 +103,25 @@ class ChatViewModel(
     private fun loadMessages() {
         viewModelScope.launch {
             try {
-                repository.getMessagesForUser(userId).collect { messagesList ->
-                    val viewModels = messagesList.map { message ->
-                        MessageViewModel(
-                            id = message.id,
-                            content = message.content,
-                            timestamp = message.timestamp,
-                            isMine = message.senderId == currentUser?.id,
-                            isRead = message.isRead,
-                            isDelivered = message.isDelivered,
-                            type = message.type
-                        )
+                repository.getMessagesForUser(userId)
+                    .flowOn(Dispatchers.IO)
+                    .catch { e ->
+                        _errorMessage.postValue("Error al cargar mensajes: ${e.message}")
                     }
-                    _messages.value = viewModels.sortedBy { it.timestamp }
-                }
+                    .collect { messagesList ->
+                        val viewModels = messagesList.map { message ->
+                            MessageViewModel(
+                                id = message.id,
+                                content = message.content,
+                                timestamp = message.timestamp,
+                                isMine = message.senderId == currentUser?.id,
+                                isRead = message.isRead,
+                                isDelivered = message.isDelivered,
+                                type = message.type
+                            )
+                        }
+                        _messages.value = viewModels.sortedBy { it.timestamp }
+                    }
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cargar mensajes: ${e.message}"
             }
@@ -100,7 +129,7 @@ class ChatViewModel(
     }
     
     fun sendTextMessage(text: String) {
-        if (currentUser == null) return
+        if (text.isBlank() || currentUser == null) return
         
         val message = Message(
             senderId = currentUser!!.id,
@@ -109,21 +138,34 @@ class ChatViewModel(
             type = MessageType.TEXT
         )
         
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                repository.sendMessage(message)
+                val success = repository.sendMessage(message)
+                if (!success) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "No se pudo enviar el mensaje"
+                    }
+                }
             } catch (e: Exception) {
-                _errorMessage.value = "Error al enviar mensaje: ${e.message}"
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Error al enviar mensaje: ${e.message}"
+                }
             }
         }
     }
     
     fun startWalkieTalkieRecording() {
         try {
-            val audioFile = File(getApplication<Application>().cacheDir, "audio_${UUID.randomUUID()}.3gp")
-            audioRecorderService.startRecording(audioFile.absolutePath)
+            // Limpiar cualquier archivo anterior
+            cleanupAudioFile()
+            
+            // Crear un nuevo archivo temporal
+            val cacheDir = getApplication<Application>().cacheDir
+            currentAudioFile = File(cacheDir, "audio_${UUID.randomUUID()}.3gp")
+            audioRecorderService.startRecording(currentAudioFile!!.absolutePath)
         } catch (e: Exception) {
             _errorMessage.value = "Error al iniciar grabación: ${e.message}"
+            cleanupAudioFile()
         }
     }
     
@@ -132,25 +174,59 @@ class ChatViewModel(
             val audioFilePath = audioRecorderService.stopRecording()
             if (audioFilePath != null && currentUser != null) {
                 // En una app real, subiríamos el archivo de audio y enviaríamos la URL
-                // Por ahora, sólo enviamos un mensaje que indica un audio
-                val message = Message(
-                    senderId = currentUser!!.id,
-                    recipientId = userId,
-                    content = "walkie_talkie_audio", // En una app real, esta sería la URL
-                    type = MessageType.WALKIE_TALKIE
-                )
-                
-                viewModelScope.launch {
-                    try {
-                        repository.sendMessage(message)
-                    } catch (e: Exception) {
-                        _errorMessage.value = "Error al enviar audio: ${e.message}"
-                    }
-                }
+                sendWalkieTalkieMessage(audioFilePath)
             }
         } catch (e: Exception) {
             _errorMessage.value = "Error al detener grabación: ${e.message}"
+        } finally {
+            cleanupAudioFile()
         }
+    }
+    
+    private fun sendWalkieTalkieMessage(audioPath: String) {
+        if (currentUser == null) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val message = Message(
+                    senderId = currentUser!!.id,
+                    recipientId = userId,
+                    content = audioPath, // En una app real, esta sería la URL o referencia al audio
+                    type = MessageType.WALKIE_TALKIE
+                )
+                
+                val success = repository.sendMessage(message)
+                if (!success) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "No se pudo enviar el audio"
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Error al enviar audio: ${e.message}"
+                }
+            }
+        }
+    }
+    
+    private fun cleanupAudioFile() {
+        currentAudioFile?.let {
+            if (it.exists()) {
+                try {
+                    it.delete()
+                } catch (e: Exception) {
+                    // Ignorar errores al eliminar
+                }
+            }
+        }
+        currentAudioFile = null
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        // Liberar recursos cuando el ViewModel se destruya
+        audioRecorderService.dispose()
+        cleanupAudioFile()
     }
 }
 
