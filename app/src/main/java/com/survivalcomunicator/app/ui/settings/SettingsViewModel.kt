@@ -8,11 +8,14 @@ import androidx.lifecycle.viewModelScope
 import com.survivalcomunicator.app.utils.CryptoManager
 import com.survivalcomunicator.app.utils.PreferencesManager
 import kotlinx.coroutines.launch
+import com.survivalcomunicator.app.repository.Repository
+import com.survivalcomunicator.app.App
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     
     private val preferencesManager = PreferencesManager(application)
     private val cryptoManager = CryptoManager()
+    private val repository: Repository = (application as App).repository
     
     private val _username = MutableLiveData<String>()
     val username: LiveData<String> = _username
@@ -34,7 +37,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private fun loadSettings() {
         viewModelScope.launch {
             _username.value = preferencesManager.getUsername() ?: ""
-            _serverUrl.value = preferencesManager.getServerUrl() ?: "https://example.com"
+            _serverUrl.value = preferencesManager.getServerUrl() ?: "http://10.0.2.2:3000/api"
         }
     }
     
@@ -80,5 +83,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             _errorMessage.value = "Error al importar clave pública: ${e.message}"
             false
         }
+    }
+    
+    suspend fun registerUserOnServer(username: String, publicKey: String) {
+        repository.registerUser(username, publicKey)
     }
 }

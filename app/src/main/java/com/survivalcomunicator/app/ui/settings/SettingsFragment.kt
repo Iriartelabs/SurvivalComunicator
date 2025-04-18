@@ -15,6 +15,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
     private lateinit var viewModel: SettingsViewModel
@@ -70,6 +72,20 @@ class SettingsFragment : Fragment() {
             }
             viewModel.saveSettings(username, serverUrl)
             Toast.makeText(requireContext(), "Configuración guardada", Toast.LENGTH_SHORT).show()
+
+            // Enviar usuario y clave pública al servidor
+            val publicKey = viewModel.publicKey.value ?: ""
+            if (publicKey.isNotEmpty()) {
+                // Lanzar corrutina para registrar usuario
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        viewModel.registerUserOnServer(username, publicKey)
+                        Toast.makeText(requireContext(), "Usuario registrado en el servidor", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), "Error al registrar usuario en el servidor: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
         }
 
         // Botón exportar clave

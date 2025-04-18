@@ -14,6 +14,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import com.google.gson.FieldNamingPolicy
+import com.google.gson.GsonBuilder
 
 class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
     
@@ -23,11 +25,15 @@ class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
     
+    private val gson = GsonBuilder()
+        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+        .create()
+
     private val retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(serverUrl)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
     
