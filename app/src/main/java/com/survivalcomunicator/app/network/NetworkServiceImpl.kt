@@ -27,13 +27,9 @@ class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
     private val api = retrofit.create(NetworkApi::class.java)
     
     override suspend fun registerUser(username: String, publicKey: String): User {
-        // En una implementación real, esta llamada registraría al usuario en el servidor
-        // Por ahora, simulamos el registro exitoso
-        return User(
-            username = username,
-            publicKey = publicKey,
-            serverAddress = serverUrl
-        )
+        // Llamada real al backend usando Retrofit
+        val request = UserRegistrationRequest(username, publicKey)
+        return api.registerUser(request)
     }
     
     override suspend fun findUser(username: String): User? {

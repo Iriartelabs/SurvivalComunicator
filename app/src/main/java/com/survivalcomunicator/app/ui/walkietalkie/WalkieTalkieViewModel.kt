@@ -5,10 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.survivalcomunicator.app.database.AppDatabase
+import com.survivalcomunicator.app.App
 import com.survivalcomunicator.app.models.User
-import com.survivalcomunicator.app.network.NetworkServiceImpl
-import com.survivalcomunicator.app.repository.Repository
 import com.survivalcomunicator.app.services.AudioRecorderService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -17,11 +15,7 @@ import java.util.UUID
 
 class WalkieTalkieViewModel(application: Application) : AndroidViewModel(application) {
     
-    private val database = AppDatabase.getDatabase(application)
-    private val messageDao = database.messageDao()
-    private val userDao = database.userDao()
-    private val networkService = NetworkServiceImpl("https://your-server-url.com") // Cambiar por URL real
-    private val repository = Repository(messageDao, userDao, networkService)
+    private val repository = (application as App).repository
     private val audioRecorderService = AudioRecorderService(application)
     
     private val _isTransmitting = MutableLiveData<Boolean>()

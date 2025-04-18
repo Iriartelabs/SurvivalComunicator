@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.survivalcomunicator.app.App
 import com.survivalcomunicator.app.database.AppDatabase
 import com.survivalcomunicator.app.models.Message
 import com.survivalcomunicator.app.models.MessageType
@@ -21,14 +22,10 @@ import java.util.UUID
 
 class ChatViewModel(
     application: Application,
-    private val userId: String
+    private val userId: String,
+    private val repository: com.survivalcomunicator.app.repository.Repository
 ) : AndroidViewModel(application) {
     
-    private val database = AppDatabase.getDatabase(application)
-    private val messageDao = database.messageDao()
-    private val userDao = database.userDao()
-    private val networkService = NetworkServiceImpl("https://your-server-url.com") // Cambiar por URL real
-    private val repository = Repository(messageDao, userDao, networkService)
     private val audioRecorderService = AudioRecorderService(application)
     
     private val _messages = MutableLiveData<List<MessageViewModel>>()
@@ -60,7 +57,7 @@ class ChatViewModel(
                 )
                 
                 // Obtener información del usuario del chat
-                val user = userDao.getUserById(userId)
+                val user = repository.getUserById(userId)
                 if (user != null) {
                     chatPartner = User(
                         id = user.id,
@@ -163,8 +160,9 @@ class ChatViewModelFactory(
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
+            val repository = (application as App).repository
             @Suppress("UNCHECKED_CAST")
-            return ChatViewModel(application, userId) as T
+            return ChatViewModel(application, userId, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

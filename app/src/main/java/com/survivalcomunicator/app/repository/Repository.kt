@@ -49,6 +49,20 @@ class Repository(
         return remoteUser
     }
     
+    // Obtener usuario por ID
+    suspend fun getUserById(userId: String): User? {
+        val entity = userDao.getUserById(userId)
+        return entity?.let {
+            User(
+                id = it.id,
+                username = it.username,
+                publicKey = it.publicKey,
+                lastSeen = it.lastSeen,
+                serverAddress = it.serverAddress
+            )
+        }
+    }
+    
     fun getAllUsers(): Flow<List<User>> {
         return userDao.getAllUsers().map { entities ->
             entities.map { entity ->

@@ -8,7 +8,6 @@ import android.widget.EditText
 import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
@@ -18,7 +17,6 @@ class ChatFragment : Fragment() {
     
     private lateinit var viewModel: ChatViewModel
     private lateinit var adapter: MessageAdapter
-    private val args: ChatFragmentArgs by navArgs()
     
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -31,8 +29,11 @@ class ChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Obtener userId del argumento - usando Bundle
+        val userId = arguments?.getString("userId") ?: ""
+        
         // Inicializa ViewModel
-        val factory = ChatViewModelFactory(requireActivity().application, args.userId)
+        val factory = ChatViewModelFactory(requireActivity().application, userId)
         viewModel = ViewModelProvider(this, factory)[ChatViewModel::class.java]
         
         // Configura RecyclerView

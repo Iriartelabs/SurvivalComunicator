@@ -5,11 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.survivalcomunicator.app.database.AppDatabase
+import com.survivalcomunicator.app.App
 import com.survivalcomunicator.app.models.Message
 import com.survivalcomunicator.app.models.User
-import com.survivalcomunicator.app.network.NetworkServiceImpl
-import com.survivalcomunicator.app.repository.Repository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -17,11 +15,7 @@ import kotlinx.coroutines.withContext
 
 class ChatsViewModel(application: Application) : AndroidViewModel(application) {
     
-    private val database = AppDatabase.getDatabase(application)
-    private val messageDao = database.messageDao()
-    private val userDao = database.userDao()
-    private val networkService = NetworkServiceImpl("https://your-server-url.com") // Cambiar por URL real
-    private val repository = Repository(messageDao, userDao, networkService)
+    private val repository = (application as App).repository
     
     private val _chats = MutableLiveData<List<ChatPreview>>()
     val chats: LiveData<List<ChatPreview>> = _chats
