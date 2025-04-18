@@ -11,6 +11,10 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.survivalcomunicator.app.R
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.appcompat.app.AlertDialog
 
 class SettingsFragment : Fragment() {
     
@@ -25,7 +29,7 @@ class SettingsFragment : Fragment() {
     }
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+        super.onViewCreated(view)
         
         viewModel = ViewModelProvider(this)[SettingsViewModel::class.java]
         
@@ -77,16 +81,33 @@ class SettingsFragment : Fragment() {
         // Botón exportar clave
         exportButton.setOnClickListener {
             viewModel.exportPublicKey()?.let { key ->
-                // En una app real, aquí implementaríamos la exportación real
-                // Por ejemplo, copiar al portapapeles o guardar en un archivo
-                Toast.makeText(requireContext(), "Clave exportada", Toast.LENGTH_SHORT).show()
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Clave pública", key)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(requireContext(), "Clave copiada al portapapeles", Toast.LENGTH_SHORT).show()
             }
         }
         
         // Botón importar clave
         importButton.setOnClickListener {
-            // En una app real, aquí mostraríamos un diálogo para importar
-            Toast.makeText(requireContext(), "Función no implementada", Toast.LENGTH_SHORT).show()
+            val input = EditText(requireContext())
+            AlertDialog.Builder(requireContext())
+                .setTitle("Importar clave pública")
+                .setMessage("Pega la clave pública a importar:")
+                .setView(input)
+                .setPositiveButton("Importar") { _, _ ->
+                    val key = input.text.toString().trim()
+                    if (key.isNotEmpty()) {
+                        val success = viewModel.importPublicKey(key)
+                        if (success) {
+                            Toast.makeText(requireContext(), "Clave importada correctamente", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(requireContext(), "Clave inválida o error al importar", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
         
         // Observar mensajes de error

@@ -14,6 +14,7 @@ import com.survivalcomunicator.app.utils.PreferencesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -51,26 +52,24 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadChats() {
         viewModelScope.launch {
             try {
-                // Utilizamos withContext para cambiar al hilo de IO para la operación inicial
                 withContext(Dispatchers.IO) {
                     repository.getAllUsers()
-                        .flowOn(Dispatchers.IO)  // Aseguramos que la recolección se haga en el hilo de IO
-                        .catch { e -> 
+                        .flowOn(Dispatchers.IO)
+                        .catch { e ->
                             _errorMessage.postValue("Error al cargar los chats: ${e.message}")
                         }
                         .collect { userList ->
-                            // Procesamos cada usuario para obtener la información del chat
                             val chatPreviews = userList.map { user ->
-                                // En una app real, aquí obtendrías el último mensaje
+                                val lastMessage = getLastMessageForUser(user.id)
+                                val unreadCount = getUnreadCountForUser(user.id)
                                 ChatPreview(
                                     userId = user.id,
                                     username = user.username,
-                                    lastMessage = getLastMessageForUser(user.id),
+                                    lastMessage = lastMessage,
                                     timestamp = System.currentTimeMillis(),
-                                    unreadCount = getUnreadCountForUser(user.id)
+                                    unreadCount = unreadCount
                                 )
                             }
-                            // Usamos postValue para actualizar el LiveData desde un hilo secundario
                             _chats.postValue(chatPreviews)
                         }
                 }
@@ -80,16 +79,16 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    // Método simulado para obtener el último mensaje
-    private fun getLastMessageForUser(userId: String): String {
-        // En una app real, esto vendría de la base de datos
-        return "Último mensaje..."
+    private suspend fun getLastMessageForUser(userId: String): String {
+        // Obtiene el último mensaje real entre el usuario actual y el usuario dado
+        val messages = messageDao.getMessagesForUser(userId).firstOrNull() ?: emptyList()
+        return messages.firstOrNull()?.content ?: "Sin mensajes"
     }
-    
-    // Método simulado para obtener el conteo de mensajes no leídos
-    private fun getUnreadCountForUser(userId: String): Int {
-        // En una app real, esto vendría de la base de datos
-        return 0
+
+    private suspend fun getUnreadCountForUser(userId: String): Int {
+        // Cuenta los mensajes no leídos enviados al usuario actual por el usuario dado
+        val messages = messageDao.getMessagesForUser(userId).firstOrNull() ?: emptyList()
+        return messages.count { !it.isRead && it.senderId == userId }
     }
     
     fun addNewContact(username: String) {
