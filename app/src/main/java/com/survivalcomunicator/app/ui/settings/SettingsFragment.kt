@@ -17,9 +17,8 @@ import android.content.Context
 import androidx.appcompat.app.AlertDialog
 
 class SettingsFragment : Fragment() {
-    
     private lateinit var viewModel: SettingsViewModel
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -27,12 +26,12 @@ class SettingsFragment : Fragment() {
     ): View? {
         return inflater.inflate(R.layout.fragment_settings, container, false)
     }
-    
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view)
-        
+        super.onViewCreated(view, savedInstanceState)
+
         viewModel = ViewModelProvider(this)[SettingsViewModel::class.java]
-        
+
         // Referencias a vistas
         val usernameInput = view.findViewById<EditText>(R.id.username_input)
         val serverUrlInput = view.findViewById<EditText>(R.id.server_url_input)
@@ -40,16 +39,14 @@ class SettingsFragment : Fragment() {
         val saveButton = view.findViewById<Button>(R.id.save_settings_button)
         val exportButton = view.findViewById<Button>(R.id.export_key_button)
         val importButton = view.findViewById<Button>(R.id.import_key_button)
-        
+
         // Cargar configuración actual
         viewModel.username.observe(viewLifecycleOwner) { username ->
             usernameInput.setText(username)
         }
-        
         viewModel.serverUrl.observe(viewLifecycleOwner) { serverUrl ->
             serverUrlInput.setText(serverUrl)
         }
-        
         viewModel.publicKey.observe(viewLifecycleOwner) { publicKey ->
             val shortened = if (publicKey.length > 40) {
                 "${publicKey.substring(0, 20)}...${publicKey.substring(publicKey.length - 20)}"
@@ -58,26 +55,23 @@ class SettingsFragment : Fragment() {
             }
             publicKeyText.text = shortened
         }
-        
+
         // Botón guardar
         saveButton.setOnClickListener {
             val username = usernameInput.text.toString().trim()
             val serverUrl = serverUrlInput.text.toString().trim()
-            
             if (username.isEmpty()) {
                 Toast.makeText(requireContext(), "El nombre de usuario no puede estar vacío", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            
             if (serverUrl.isEmpty()) {
                 Toast.makeText(requireContext(), "La URL del servidor no puede estar vacía", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            
             viewModel.saveSettings(username, serverUrl)
             Toast.makeText(requireContext(), "Configuración guardada", Toast.LENGTH_SHORT).show()
         }
-        
+
         // Botón exportar clave
         exportButton.setOnClickListener {
             viewModel.exportPublicKey()?.let { key ->
@@ -87,7 +81,7 @@ class SettingsFragment : Fragment() {
                 Toast.makeText(requireContext(), "Clave copiada al portapapeles", Toast.LENGTH_SHORT).show()
             }
         }
-        
+
         // Botón importar clave
         importButton.setOnClickListener {
             val input = EditText(requireContext())
@@ -109,7 +103,7 @@ class SettingsFragment : Fragment() {
                 .setNegativeButton("Cancelar", null)
                 .show()
         }
-        
+
         // Observar mensajes de error
         viewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
             if (errorMessage.isNotEmpty()) {
