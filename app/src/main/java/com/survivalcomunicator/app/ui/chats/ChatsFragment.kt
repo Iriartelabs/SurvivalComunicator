@@ -1,9 +1,9 @@
 package com.survivalcomunicator.app.ui.chats
-
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -33,9 +33,9 @@ class ChatsFragment : Fragment() {
         // Configurar RecyclerView
         val recyclerView = view.findViewById<RecyclerView>(R.id.chats_recycler_view)
         chatAdapter = ChatListAdapter { userId ->
-            // Navegar al chat con el usuario seleccionado
-            val action = ChatsFragmentDirections.actionChatsToChatFragment(userId)
-            findNavController().navigate(action)
+            // Navegar al chat con el usuario seleccionado usando bundle
+            val bundle = bundleOf("userId" to userId)
+            findNavController().navigate(R.id.action_chats_to_chat, bundle)
         }
         
         recyclerView.apply {
