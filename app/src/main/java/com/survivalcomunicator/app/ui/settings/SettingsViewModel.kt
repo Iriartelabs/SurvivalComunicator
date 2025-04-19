@@ -37,7 +37,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private fun loadSettings() {
         viewModelScope.launch {
             _username.value = preferencesManager.getUsername() ?: ""
-            _serverUrl.value = preferencesManager.getServerUrl() ?: "http://10.0.2.2:3000/api"
+            _serverUrl.value = preferencesManager.getServerUrl() ?: ""
         }
     }
     
@@ -56,7 +56,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             try {
                 preferencesManager.saveUsername(username)
                 preferencesManager.saveServerUrl(serverUrl)
-                
+                // Actualiza los LiveData inmediatamente
                 _username.value = username
                 _serverUrl.value = serverUrl
             } catch (e: Exception) {
