@@ -1,6 +1,7 @@
 // Ruta: app/src/main/java/com/survivalcomunicator/app/network/NetworkServiceImpl.kt
 package com.survivalcomunicator.app.network
 
+import android.util.Log
 import com.survivalcomunicator.app.models.Message
 import com.survivalcomunicator.app.models.MessageType
 import com.survivalcomunicator.app.models.User
@@ -19,6 +20,8 @@ import com.google.gson.GsonBuilder
 
 class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
     
+    private val TAG = "NetworkServiceImpl"
+    
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -30,6 +33,7 @@ class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
         .create()
 
     private val retrofit by lazy {
+        Log.d(TAG, "Base URL: '$serverUrl'")
         Retrofit.Builder()
             .baseUrl(serverUrl)
             .client(okHttpClient)
@@ -47,7 +51,15 @@ class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
     }
     
     override suspend fun findUser(username: String): User? {
-        return api.findUser(username)
+        try {
+            Log.d(TAG, "Buscando usuario: $username")
+            val response = api.findUser(username)
+            Log.d(TAG, "Respuesta: $response")
+            return response?.user
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al buscar usuario: ${e.message}", e)
+            throw e
+        }
     }
     
     override suspend fun sendMessage(message: Message): Boolean {

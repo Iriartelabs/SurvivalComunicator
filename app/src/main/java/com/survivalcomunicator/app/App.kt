@@ -19,20 +19,15 @@ class App : Application() {
     private fun getServerUrlSync(): String {
         // Leer la URL guardada en preferencias de forma síncrona
         return runBlocking {
-            preferencesManager.getServerUrl() ?: "http://192.168.1.35:3000/"
+            preferencesManager.getServerUrl() ?: ""
         }
-    }
-    private val networkService by lazy { 
-        NetworkServiceImpl(
-            serverUrl = getServerUrlSync()
-        ) 
     }
     
     val repository by lazy { 
         Repository(
             messageDao = database.messageDao(),
             userDao = database.userDao(),
-            networkService = networkService
+            networkService = getDynamicNetworkService()
         ) 
     }
     
@@ -46,8 +41,13 @@ class App : Application() {
     }
     
     private fun getServerUrl(): String {
-        // En un escenario real, esto se obtendría de las preferencias
-        // pero para simplificar, usamos un valor por defecto
-        return "https://example.com/api"
+        // Ya no hay valor por defecto hardcodeado
+        return ""
+    }
+
+    // Crea siempre una nueva instancia de NetworkServiceImpl con la URL actual de preferencias
+    fun getDynamicNetworkService(): NetworkServiceImpl {
+        val url = runBlocking { preferencesManager.getServerUrl() ?: "" }
+        return NetworkServiceImpl(url)
     }
 }

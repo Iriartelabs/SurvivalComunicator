@@ -33,8 +33,6 @@ class ChatViewModel(
     private val messageDao = database.messageDao()
     private val userDao = database.userDao()
     private val preferencesManager = PreferencesManager(application)
-    private val networkService = NetworkServiceImpl(getServerUrl())
-    private val repository = Repository(messageDao, userDao, networkService)
     private val audioRecorderService = AudioRecorderService(application)
     
     private val _messages = MutableLiveData<List<MessageViewModel>>()
@@ -55,17 +53,29 @@ class ChatViewModel(
         loadMessages()
     }
 
-    private fun getServerUrl(): String {
-        // En una app real, esto sería obtenido de las preferencias
-        return "https://example.com/api"
+    private suspend fun getServerUrl(): String {
+        return preferencesManager.getServerUrl() ?: ""
+    }
+
+    private suspend fun getNetworkService(): NetworkServiceImpl {
+        val url = preferencesManager.getServerUrl() ?: ""
+        return NetworkServiceImpl(url)
+    }
+
+    private suspend fun getRepository(): Repository {
+        return Repository(messageDao, userDao, getNetworkService())
     }
     
     private fun loadUserInfo() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Intentar obtener el ID del usuario actual desde las preferencias
-                val currentUserId = preferencesManager.getUserId() ?: "current_user_id"
-                
+                val currentUserId = preferencesManager.getUserId()
+                if (currentUserId == null) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = "Debes registrarte antes de usar el chat"
+                    }
+                    return@launch
+                }
                 // Obtener información del usuario actual (para "mío" vs "suyo")
                 currentUser = User(
                     id = currentUserId,
@@ -102,12 +112,13 @@ class ChatViewModel(
     private fun loadMessages() {
         viewModelScope.launch {
             try {
+                val repository = getRepository()
                 repository.getMessagesForUser(userId)
                     .flowOn(Dispatchers.IO)
                     .catch { e ->
                         _errorMessage.postValue("Error al cargar mensajes: ${e.message}")
                     }
-                    .collect { messagesList ->
+                    .collect { messagesList -> 
                         val viewModels = messagesList.map { message ->
                             MessageViewModel(
                                 id = message.id,
@@ -139,6 +150,7 @@ class ChatViewModel(
         
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val repository = getRepository()
                 val success = repository.sendMessage(message)
                 if (!success) {
                     withContext(Dispatchers.Main) {
@@ -187,6 +199,7 @@ class ChatViewModel(
         
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val repository = getRepository()
                 val message = Message(
                     senderId = currentUser!!.id,
                     recipientId = userId,

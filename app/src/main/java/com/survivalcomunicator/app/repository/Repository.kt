@@ -146,7 +146,7 @@ class Repository(
             val userEntity = UserEntity(
                 id = user.id,
                 username = user.username,
-                publicKey = user.publicKey,
+                publicKey = user.publicKey ?: "", // Usar string vacía si es null
                 lastSeen = user.lastSeen,
                 serverAddress = user.serverAddress
             )

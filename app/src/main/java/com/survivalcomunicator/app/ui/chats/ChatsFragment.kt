@@ -1,4 +1,5 @@
 package com.survivalcomunicator.app.ui.chats
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -43,11 +44,11 @@ class ChatsFragment : Fragment() {
             adapter = chatAdapter
         }
         
-        // Configurar FAB para añadir nuevo chat
+        // Configurar FAB para navegar a la pantalla de Contactos
         val fab = view.findViewById<FloatingActionButton>(R.id.fab_new_chat)
         fab.setOnClickListener {
-            // Mostrar diálogo para añadir nuevo contacto
-            NewContactDialogFragment().show(childFragmentManager, "NewContactDialog")
+            // Navegar a la pantalla de Contactos
+            findNavController().navigate(R.id.action_chats_to_contacts)
         }
         
         // Observar la lista de chats

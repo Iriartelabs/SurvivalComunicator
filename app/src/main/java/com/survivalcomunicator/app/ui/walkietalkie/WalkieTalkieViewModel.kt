@@ -13,11 +13,15 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
+import com.survivalcomunicator.app.utils.PreferencesManager
+import com.survivalcomunicator.app.network.NetworkServiceImpl
+import com.survivalcomunicator.app.repository.Repository
+import com.survivalcomunicator.app.database.AppDatabase
 
 class WalkieTalkieViewModel(application: Application) : AndroidViewModel(application) {
     
-    private val repository = (application as App).repository
     private val audioRecorderService = AudioRecorderService(application)
+    private val preferencesManager = PreferencesManager(getApplication())
     
     private val _isTransmitting = MutableLiveData<Boolean>()
     val isTransmitting: LiveData<Boolean> = _isTransmitting
@@ -39,9 +43,23 @@ class WalkieTalkieViewModel(application: Application) : AndroidViewModel(applica
         _incomingTransmission.value = null
     }
     
+    private suspend fun getNetworkService(): NetworkServiceImpl {
+        val url = preferencesManager.getServerUrl() ?: ""
+        return NetworkServiceImpl(url)
+    }
+
+    private suspend fun getRepository(): Repository {
+        return Repository(
+            AppDatabase.getDatabase(getApplication()).messageDao(),
+            AppDatabase.getDatabase(getApplication()).userDao(),
+            getNetworkService()
+        )
+    }
+
     fun connectToWalkieTalkieNetwork() {
         viewModelScope.launch {
             try {
+                val repository = getRepository()
                 val users = repository.getAllUsers().firstOrNull() ?: emptyList()
                 _connectedUsers.value = users
                 startListeningForTransmissions()

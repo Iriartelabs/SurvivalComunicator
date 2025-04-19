@@ -70,7 +70,13 @@ class SettingsFragment : Fragment() {
                 Toast.makeText(requireContext(), "La URL del servidor no puede estar vacía", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            viewModel.saveSettings(username, serverUrl)
+            if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
+                Toast.makeText(requireContext(), "La URL debe empezar por http:// o https://", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // Forzar barra final
+            val fixedServerUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
+            viewModel.saveSettings(username, fixedServerUrl)
             Toast.makeText(requireContext(), "Configuración guardada", Toast.LENGTH_SHORT).show()
 
             // Enviar usuario y clave pública al servidor

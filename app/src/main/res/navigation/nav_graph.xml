@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_chats_to_chat"
             app:destination="@id/chatFragment" />
+        <action
+            android:id="@+id/action_chats_to_contacts"
+            app:destination="@id/contactsFragment" />
     </fragment>
 
     <fragment
@@ -23,6 +26,16 @@
         <argument
             android:name="userId"
             app:argType="string" />
+    </fragment>
+    
+    <fragment
+        android:id="@+id/contactsFragment"
+        android:name="com.survivalcomunicator.app.ui.contacts.ContactsFragment"
+        android:label="Contactos"
+        tools:layout="@layout/fragment_contacts">
+        <action
+            android:id="@+id/action_contacts_to_chat"
+            app:destination="@id/chatFragment" />
     </fragment>
 
     <fragment

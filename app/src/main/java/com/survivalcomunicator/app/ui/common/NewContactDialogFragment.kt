@@ -1,20 +1,31 @@
-package com.survivalcomunicator.app.ui.chats
+package com.survivalcomunicator.app.ui.common
 
 import android.app.Dialog
+import android.content.Context
 import android.os.Bundle
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.ViewModelProvider
 import com.survivalcomunicator.app.R
 
+/**
+ * Diálogo unificado para añadir nuevos contactos.
+ * Puede ser utilizado desde cualquier fragmento que implemente la interfaz ContactAddedListener.
+ */
 class NewContactDialogFragment : DialogFragment() {
     
-    private lateinit var viewModel: ChatsViewModel
+    // Interfaz para notificar cuando se añade un contacto
+    interface ContactAddedListener {
+        fun onContactAdded(username: String)
+    }
+    
+    private var listener: ContactAddedListener? = null
+    
+    fun setContactAddedListener(listener: ContactAddedListener) {
+        this.listener = listener
+    }
     
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        viewModel = ViewModelProvider(requireParentFragment())[ChatsViewModel::class.java]
-        
         val builder = AlertDialog.Builder(requireContext())
         val inflater = requireActivity().layoutInflater
         val view = inflater.inflate(R.layout.dialog_new_contact, null)
@@ -26,7 +37,7 @@ class NewContactDialogFragment : DialogFragment() {
             .setPositiveButton("Añadir") { _, _ ->
                 val username = usernameInput.text.toString().trim()
                 if (username.isNotEmpty()) {
-                    viewModel.addNewContact(username)
+                    listener?.onContactAdded(username)
                 }
             }
             .setNegativeButton("Cancelar") { dialog, _ ->
@@ -34,5 +45,13 @@ class NewContactDialogFragment : DialogFragment() {
             }
         
         return builder.create()
+    }
+    
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        // Intentar detectar automáticamente el listener
+        if (parentFragment is ContactAddedListener) {
+            listener = parentFragment as ContactAddedListener
+        }
     }
 }

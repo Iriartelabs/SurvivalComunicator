@@ -24,8 +24,15 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
     private val messageDao = database.messageDao()
     private val userDao = database.userDao()
     private val preferencesManager = PreferencesManager(application)
-    private val networkService = NetworkServiceImpl(getServerUrl())
-    private val repository = Repository(messageDao, userDao, networkService)
+    
+    private suspend fun getNetworkService(): NetworkServiceImpl {
+        val url = preferencesManager.getServerUrl() ?: ""
+        return NetworkServiceImpl(url)
+    }
+
+    private suspend fun getRepository(): Repository {
+        return Repository(messageDao, userDao, getNetworkService())
+    }
     
     private val _chats = MutableLiveData<List<ChatPreview>>()
     val chats: LiveData<List<ChatPreview>> = _chats
@@ -45,6 +52,7 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
     
     private fun startMessageListener() {
         viewModelScope.launch(Dispatchers.IO) {
+            val repository = getRepository()
             repository.startListeningForMessages()
         }
     }
@@ -53,6 +61,7 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
+                    val repository = getRepository()
                     repository.getAllUsers()
                         .flowOn(Dispatchers.IO)
                         .catch { e ->
@@ -99,6 +108,7 @@ class ChatsViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val repository = getRepository()
                 val user = repository.findUser(username)
                 if (user != null) {
                     // Usuario encontrado, refrescar la lista de chats
