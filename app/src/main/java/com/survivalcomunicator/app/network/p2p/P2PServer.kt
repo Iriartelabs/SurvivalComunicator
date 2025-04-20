@@ -233,9 +233,7 @@ class P2PServer(private val context: Context) {
     ) {
         try {
             val jsonMessage = JSONObject(messageStr)
-            val type = jsonMessage.getString("type")
-            
-            when (type) {
+            when (val type = jsonMessage.getString("type")) {
                 "chat_message" -> {
                     // Mensaje de chat
                     val messageId = jsonMessage.getString("messageId")

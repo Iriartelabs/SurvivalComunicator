@@ -6,25 +6,28 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [MessageEntity::class, UserEntity::class],
-    version = 1,
+    entities = [UserEntity::class, MessageEntity::class], // Asegúrate de incluir todas tus entidades
+    version = 2, // Incrementamos a versión 2
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun messageDao(): MessageDao
     abstract fun userDao(): UserDao
-    
+    abstract fun messageDao(): MessageDao // Si tienes un DAO para mensajes
+
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
-        
-        fun getDatabase(context: Context): AppDatabase {
+
+        fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "survival_communicator_database"
-                ).build()
+                    "survival_comunicator.db"
+                )
+                    .addMigrations(*getMigrations()) // Añadimos las migraciones
+                    .fallbackToDestructiveMigration() // Opcional: si la migración falla, recreará la base de datos
+                    .build()
                 INSTANCE = instance
                 instance
             }

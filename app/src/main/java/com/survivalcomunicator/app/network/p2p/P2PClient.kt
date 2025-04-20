@@ -222,9 +222,7 @@ class P2PClient(private val context: Context) {
     private fun processIncomingMessage(message: String, senderId: String) {
         try {
             val jsonMessage = JSONObject(message)
-            val type = jsonMessage.getString("type")
-            
-            when (type) {
+            when (val type = jsonMessage.getString("type")) {
                 "chat_message" -> {
                     val messageId = jsonMessage.getString("messageId")
                     val encryptedContent = jsonMessage.getString("content")

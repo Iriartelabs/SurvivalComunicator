@@ -295,21 +295,37 @@ class RelayService(
         override fun isClosed() = underlying.isClosed
         override fun isInputShutdown() = underlying.isInputShutdown
         override fun isOutputShutdown() = underlying.isOutputShutdown
-        override fun setSoTimeout(timeout: Int) = underlying.setSoTimeout(timeout)
+        override fun setSoTimeout(timeout: Int) {
+            underlying.soTimeout = timeout
+        }
         override fun getSoTimeout() = underlying.soTimeout
-        override fun setSendBufferSize(size: Int) = underlying.setSendBufferSize(size)
+        override fun setSendBufferSize(size: Int) {
+            underlying.sendBufferSize = size
+        }
         override fun getSendBufferSize() = underlying.sendBufferSize
-        override fun setReceiveBufferSize(size: Int) = underlying.setReceiveBufferSize(size)
+        override fun setReceiveBufferSize(size: Int) {
+            underlying.receiveBufferSize = size
+        }
         override fun getReceiveBufferSize() = underlying.receiveBufferSize
-        override fun setTcpNoDelay(on: Boolean) = underlying.setTcpNoDelay(on)
+        override fun setTcpNoDelay(on: Boolean) {
+            underlying.tcpNoDelay = on
+        }
         override fun getTcpNoDelay() = underlying.tcpNoDelay
-        override fun setKeepAlive(on: Boolean) = underlying.setKeepAlive(on)
+        override fun setKeepAlive(on: Boolean) {
+            underlying.keepAlive = on
+        }
         override fun getKeepAlive() = underlying.keepAlive
-        override fun setTrafficClass(tc: Int) = underlying.setTrafficClass(tc)
+        override fun setTrafficClass(tc: Int) {
+            underlying.trafficClass = tc
+        }
         override fun getTrafficClass() = underlying.trafficClass
-        override fun setReuseAddress(on: Boolean) = underlying.setReuseAddress(on)
+        override fun setReuseAddress(on: Boolean) {
+            underlying.reuseAddress = on
+        }
         override fun getReuseAddress() = underlying.reuseAddress
-        override fun setOOBInline(on: Boolean) = underlying.setOOBInline(on)
+        override fun setOOBInline(on: Boolean) {
+            underlying.oobInline = on
+        }
         override fun getOOBInline() = underlying.oobInline
         override fun setSoLinger(on: Boolean, linger: Int) = underlying.setSoLinger(on, linger)
         override fun getSoLinger() = underlying.soLinger

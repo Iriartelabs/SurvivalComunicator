@@ -1,3 +1,4 @@
+// app/src/main/java/com/survivalcomunicator/app/ui/verification/VerificationActivity.kt
 package com.survivalcomunicator.app.ui.verification
 
 import android.content.Intent
@@ -15,59 +16,60 @@ import com.google.zxing.common.BitMatrix
 import com.survivalcomunicator.app.R
 import com.survivalcomunicator.app.databinding.ActivityVerificationBinding
 import com.survivalcomunicator.app.model.User
-import com.survivalcomunicator.app.security.PeerVerification
 import com.survivalcomunicator.app.utils.SessionManager
 
 /**
- * Actividad para verificar la identidad de un contacto mediante diversos métodos
+ * Actividad para verificar la identidad de un contacto mediante varios métodos:
+ * - Escaneo/lectura de código QR
+ * - Comparación de palabras de verificación
+ * - Comparación de número de seguridad
  */
 class VerificationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityVerificationBinding
     private lateinit var viewModel: VerificationViewModel
     private lateinit var sessionManager: SessionManager
-    
+
     private var contactId: String? = null
     private var contactName: String? = null
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityVerificationBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
-        // Inicializar ViewModel
+
+        // Inicializar ViewModel y SessionManager
         viewModel = ViewModelProvider(this).get(VerificationViewModel::class.java)
         sessionManager = SessionManager(this)
-        
+
         // Configurar Toolbar
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.verify_identity)
-        
-        // Obtener datos del contacto
+
+        // Leer extras
         contactId = intent.getStringExtra(EXTRA_CONTACT_ID)
         contactName = intent.getStringExtra(EXTRA_CONTACT_NAME)
-        
-        if (contactId == null) {
+
+        if (contactId.isNullOrEmpty()) {
             Toast.makeText(this, R.string.contact_info_missing, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
-        
-        // Configurar nombre del contacto en la UI
+
         binding.txtContactName.text = contactName
-        
-        // Cargar información del contacto
+
+        // Carga información del contacto desde ViewModel
         viewModel.loadContactInfo(contactId!!)
-        
+
         setupTabLayout()
         setupObservers()
         setupListeners()
     }
-    
+
     private fun setupTabLayout() {
-        // Configurar TabLayout para cambiar entre métodos de verificación
-        binding.tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+        binding.tabLayout.addOnTabSelectedListener(object :
+            com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
                 when (tab?.position) {
                     0 -> showQRVerification()
@@ -75,14 +77,17 @@ class VerificationActivity : AppCompatActivity() {
                     2 -> showNumberVerification()
                 }
             }
-            
+
             override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
         })
+
+        // Inicialmente mostrar QR
+        showQRVerification()
     }
-    
+
     private fun setupObservers() {
-        // Observar el contacto cargado
+        // Observar LiveData de contacto
         viewModel.contact.observe(this) { contact ->
             contact?.let {
                 updateContactInfo(it)
@@ -95,56 +100,43 @@ class VerificationActivity : AppCompatActivity() {
             updateVerificationStatus(status)
         }
     }
-    
+
     private fun setupListeners() {
-        // Botón para marcar como verificado
+        // Marcar como verificado manualmente
         binding.btnMarkVerified.setOnClickListener {
             viewModel.markContactAsVerified(contactId!!)
-            Toast.makeText(this, getString(R.string.contact_verified), Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.contact_verified, Toast.LENGTH_SHORT).show()
         }
-        
-        // Botón para iniciar escáner QR
+
+        // Escáner QR
         binding.btnScanQr.setOnClickListener {
-            // Iniciar actividad de escáner QR
             val intent = Intent(this, QRScannerActivity::class.java)
             startActivityForResult(intent, REQUEST_QR_SCAN)
         }
-        
-        // Botón para iniciar verificación mediante desafío
+
+        // Iniciar verificación por desafío
         binding.btnVerifyChallenge.setOnClickListener {
             viewModel.startChallengeVerification(contactId!!)
         }
     }
-    
-    /**
-     * Actualiza la información del contacto en la UI
-     */
+
     private fun updateContactInfo(contact: User) {
         binding.txtFingerprint.text = viewModel.getContactFingerprint(contact)
     }
-    
-    /**
-     * Genera los datos de verificación (QR, palabras, números)
-     */
+
     private fun generateVerificationData(contact: User) {
-        // Generar código QR
+        // QR
         val qrData = viewModel.generateQRData(contact)
-        val qrBitmap = generateQRCode(qrData, 500)
-        binding.imgQrCode.setImageBitmap(qrBitmap)
-        
-        // Generar palabras de verificación
-        val myPublicKey = sessionManager.getUserPublicKey() ?: ""
-        val words = viewModel.generateVerificationWords(myPublicKey, contact.publicKey)
-        binding.txtVerificationWords.text = words
-        
-        // Generar número de seguridad
-        val safetyNumber = viewModel.generateSafetyNumber(myPublicKey, contact.publicKey)
-        binding.txtSafetyNumber.text = safetyNumber
+        binding.imgQrCode.setImageBitmap(createQRCode(qrData, QR_SIZE))
+
+        // Palabras
+        val myKey = sessionManager.getUserPublicKey().orEmpty()
+        binding.txtVerificationWords.text = viewModel.generateVerificationWords(myKey, contact.publicKey)
+
+        // Número seguridad
+        binding.txtSafetyNumber.text = viewModel.generateSafetyNumber(myKey, contact.publicKey)
     }
-    
-    /**
-     * Actualiza la UI según el estado de verificación
-     */
+
     private fun updateVerificationStatus(status: PeerVerification.VerificationStatus) {
         when (status) {
             PeerVerification.VerificationStatus.UNVERIFIED -> {
@@ -157,6 +149,7 @@ class VerificationActivity : AppCompatActivity() {
                 binding.imgVerificationStatus.setImageResource(R.drawable.ic_pending)
                 binding.txtVerificationStatus.setText(R.string.verification_in_progress)
                 binding.txtVerificationStatus.setTextColor(getColor(R.color.pending_text))
+                binding.btnMarkVerified.visibility = View.GONE
             }
             PeerVerification.VerificationStatus.VERIFIED -> {
                 binding.imgVerificationStatus.setImageResource(R.drawable.ic_verified)
@@ -172,91 +165,62 @@ class VerificationActivity : AppCompatActivity() {
             }
         }
     }
-    
-    /**
-     * Muestra la pestaña de verificación QR
-     */
+
     private fun showQRVerification() {
         binding.layoutQrVerification.visibility = View.VISIBLE
         binding.layoutWordsVerification.visibility = View.GONE
         binding.layoutNumberVerification.visibility = View.GONE
     }
-    
-    /**
-     * Muestra la pestaña de verificación por palabras
-     */
+
     private fun showWordsVerification() {
         binding.layoutQrVerification.visibility = View.GONE
         binding.layoutWordsVerification.visibility = View.VISIBLE
         binding.layoutNumberVerification.visibility = View.GONE
     }
-    
-    /**
-     * Muestra la pestaña de verificación por número
-     */
+
     private fun showNumberVerification() {
         binding.layoutQrVerification.visibility = View.GONE
         binding.layoutWordsVerification.visibility = View.GONE
         binding.layoutNumberVerification.visibility = View.VISIBLE
     }
-    
-    /**
-     * Genera un código QR a partir de datos
-     */
-    private fun generateQRCode(data: String, size: Int): Bitmap {
-        try {
-            val bitMatrix: BitMatrix = MultiFormatWriter().encode(
-                data, BarcodeFormat.QR_CODE, size, size
-            )
-            
-            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-            for (x in 0 until size) {
-                for (y in 0 until size) {
-                    bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
-                }
-            }
-            
-            return bitmap
-        } catch (e: Exception) {
-            e.printStackTrace()
-            
-            // Retornar un bitmap vacío en caso de error
-            return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+
+    private fun createQRCode(data: String, size: Int): Bitmap {
+        val bitMatrix: BitMatrix = MultiFormatWriter().encode(
+            data, BarcodeFormat.QR_CODE, size, size
+        )
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        for (x in 0 until size) for (y in 0 until size) {
+            bmp.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
         }
+        return bmp
     }
-    
-    /**
-     * Maneja el resultado del escáner QR
-     */
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        
         if (requestCode == REQUEST_QR_SCAN && resultCode == RESULT_OK) {
-            val qrResult = data?.getStringExtra(QRScannerActivity.EXTRA_QR_RESULT)
-            
-            qrResult?.let {
-                val verified = viewModel.verifyQRData(it, contactId!!)
-                
-                if (verified) {
-                    Toast.makeText(this, R.string.qr_verification_success, Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, R.string.qr_verification_failed, Toast.LENGTH_SHORT).show()
-                }
+            data?.getStringExtra(QRScannerActivity.EXTRA_QR_RESULT)?.let { qrResult ->
+                val ok = viewModel.verifyQRData(qrResult, contactId!!)
+                Toast.makeText(
+                    this,
+                    if (ok) R.string.qr_verification_success else R.string.qr_verification_failed,
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
-    
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == android.R.id.home) {
+        return if (item.itemId == android.R.id.home) {
             finish()
-            return true
-        }
-        return super.onOptionsItemSelected(item)
+            true
+        } else super.onOptionsItemSelected(item)
     }
-    
+
     companion object {
+        private const val REQUEST_QR_SCAN = 1001
+        private const val QR_SIZE = 500
         const val EXTRA_CONTACT_ID = "extra_contact_id"
         const val EXTRA_CONTACT_NAME = "extra_contact_name"
-        private const val REQUEST_QR_SCAN = 1001
     }
 }
+
