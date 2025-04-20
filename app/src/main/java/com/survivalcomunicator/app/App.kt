@@ -36,7 +36,7 @@ class App : Application() {
         
         // Iniciar escucha de mensajes entrantes
         applicationScope.launch {
-            repository.startListeningForMessages()
+
         }
     }
     

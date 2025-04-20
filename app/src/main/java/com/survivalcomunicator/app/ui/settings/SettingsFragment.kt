@@ -80,9 +80,7 @@ class SettingsFragment : Fragment() {
             Toast.makeText(requireContext(), "Configuración guardada", Toast.LENGTH_SHORT).show()
 
             // Enviar usuario y clave pública al servidor
-            val publicKey = viewModel.publicKey.value ?: ""
-            if (publicKey.isNotEmpty()) {
-                // Lanzar corrutina para registrar usuario
+            viewModel.publicKey.value?.let { publicKey ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         viewModel.registerUserOnServer(username, publicKey)

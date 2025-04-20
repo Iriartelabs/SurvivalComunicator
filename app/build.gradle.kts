@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     id("kotlin-kapt")
     id("androidx.navigation.safeargs.kotlin")
+	id("org.jetbrains.kotlin.plugin.serialization") version "1.8.0"
 }
 
 android {
@@ -82,4 +83,14 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+	
+	// Ktor WebSocket
+	implementation("io.ktor:ktor-client-core:2.3.4")
+	implementation("io.ktor:ktor-client-cio:2.3.4")
+	implementation("io.ktor:ktor-client-websockets:2.3.4")
+
+	// Ktor + Kotlinx Serialization
+	implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
+implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
 }
