@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#2196F3</color>
-    <color name="primary_dark">#1976D2</color>
-    <color name="primary_light">#BBDEFB</color>
-    <color name="accent">#FF5722</color>
+
     <color name="primary_text">#212121</color>
     <color name="secondary_text">#757575</color>
     <color name="icons">#FFFFFF</color>
     <color name="divider">#BDBDBD</color>
-    
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+
     
     <color name="message_sent_bg">#E3F2FD</color>
     <color name="message_received_bg">#FFFFFF</color>
@@ -18,4 +13,40 @@
     
     <color name="walkie_talkie_active">#F44336</color>
     <color name="walkie_talkie_inactive">#2196F3</color>
+	<!-- Colores principales -->
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#BBDEFB</color>
+    <color name="accent">#FF4081</color>
+    
+    <!-- Colores de fondo -->
+    <color name="background_light">#F5F5F5</color>
+    <color name="background_medium">#E0E0E0</color>
+    <color name="background_dark">#424242</color>
+    <color name="card_background">#FFFFFF</color>
+    
+    <!-- Colores para información y alertas -->
+    <color name="info_background">#E3F2FD</color>
+    <color name="info_text">#1565C0</color>
+    <color name="warning_background">#FFF8E1</color>
+    <color name="warning_text">#FF8F00</color>
+    <color name="error_background">#FFEBEE</color>
+    <color name="error_text">#C62828</color>
+    <color name="success_background">#E8F5E9</color>
+    <color name="success_text">#2E7D32</color>
+    <color name="pending_text">#F57F17</color>
+    
+    <!-- Colores de texto -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+    
+    <!-- Colores básicos -->
+    <color name="white">#FFFFFF</color>
+    <color name="white_70">#B3FFFFFF</color>
+    <color name="black">#000000</color>
+    
+    <!-- Colores de botones -->
+    <color name="button_primary">#2196F3</color>
+    <color name="button_cancel">#F44336</color>
 </resources>

@@ -1,90 +1,203 @@
-// Ruta: app/src/main/java/com/survivalcomunicator/app/network/NetworkServiceImpl.kt
 package com.survivalcomunicator.app.network
 
 import android.util.Log
-import com.survivalcomunicator.app.models.Message
-import com.survivalcomunicator.app.models.MessageType
-import com.survivalcomunicator.app.models.User
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
-import okhttp3.OkHttpClient
+import com.survivalcomunicator.app.model.MessageStatusResponse
+import com.survivalcomunicator.app.model.ServerResponse
+import com.survivalcomunicator.app.model.User
+import com.survivalcomunicator.app.model.UserLocation
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-import com.google.gson.FieldNamingPolicy
-import com.google.gson.GsonBuilder
+import retrofit2.http.*
+import java.util.*
 
-class NetworkServiceImpl(private val serverUrl: String) : NetworkService {
+/**
+ * Interfaz para la API REST del servidor
+ */
+interface NodeApiService {
+    @GET("/api/users/locate/{username}")
+    suspend fun locateUser(@Path("username") username: String): Response<UserLocation>
     
+    @POST("/api/users/update-location")
+    suspend fun updateUserLocation(@Body data: Map<String, Any>): Response<ServerResponse>
+    
+    @POST("/api/messages/offline")
+    suspend fun storeOfflineMessage(@Body data: Map<String, Any>): Response<ServerResponse>
+    
+    @POST("/api/messages/confirm-receipt")
+    suspend fun confirmMessageReceived(@Body data: Map<String, String>): Response<ServerResponse>
+    
+    @POST("/api/messages/read")
+    suspend fun markMessageRead(@Body data: Map<String, String>): Response<ServerResponse>
+    
+    @POST("/api/messages/status")
+    suspend fun checkMessageStatus(@Body data: Map<String, List<String>>): Response<MessageStatusResponse>
+    
+    @POST("/api/users/online")
+    suspend fun notifyUserOnline(@Body data: Map<String, Any>): Response<ServerResponse>
+}
+
+/**
+ * Interfaz para servicios de red
+ */
+interface NetworkService {
+    suspend fun getUserLocation(username: String): UserLocation?
+    suspend fun updateUserLocation(userId: String, ipAddress: String, port: Int): Boolean
+    suspend fun storeOfflineMessage(
+        senderId: String,
+        recipientUsername: String,
+        encryptedContent: String,
+        messageType: String,
+        timestamp: Long
+    ): Response<ServerResponse>
+    suspend fun confirmMessageReceived(messageId: String): Boolean
+    suspend fun markMessageRead(messageId: String): Boolean
+    suspend fun checkMessageStatus(messageIds: List<String>): Response<MessageStatusResponse>
+    suspend fun notifyUserOnline(username: String, ipAddress: String, port: Int): Response<ServerResponse>
+}
+
+/**
+ * Implementación del servicio de red que se comunica con el servidor Node.js
+ */
+class NetworkServiceImpl(baseUrl: String) : NetworkService {
     private val TAG = "NetworkServiceImpl"
     
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+    private val retrofit = Retrofit.Builder()
+        .baseUrl(baseUrl)
+        .addConverterFactory(GsonConverterFactory.create())
         .build()
     
-    private val gson = GsonBuilder()
-        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-        .create()
-
-    private val retrofit by lazy {
-        Log.d(TAG, "Base URL: '$serverUrl'")
-        Retrofit.Builder()
-            .baseUrl(serverUrl)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-    }
+    private val apiService = retrofit.create(NodeApiService::class.java)
     
-    private val api by lazy {
-        retrofit.create(NetworkApi::class.java)
-    }
-    
-    override suspend fun registerUser(username: String, publicKey: String): User {
-        val request = UserRegistrationRequest(username, publicKey)
-        return api.registerUser(request)
-    }
-    
-    override suspend fun findUser(username: String): User? {
-        try {
-            Log.d(TAG, "Buscando usuario: $username")
-            val response = api.findUser(username)
-            Log.d(TAG, "Respuesta: $response")
-            return response?.user
+    /**
+     * Obtiene la ubicación actual de un usuario
+     */
+    override suspend fun getUserLocation(username: String): UserLocation? {
+        return try {
+            val response = apiService.locateUser(username)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                Log.w(TAG, "Error localizando usuario: ${response.code()} - ${response.message()}")
+                null
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error al buscar usuario: ${e.message}", e)
-            throw e
+            Log.e(TAG, "Error en getUserLocation: ${e.message}")
+            null
         }
     }
     
-    override suspend fun sendMessage(message: Message): Boolean {
-        val response = api.sendMessage(message)
-        return response.success
-    }
-    
-    override fun receiveMessages(): Flow<Message> = flow {
-        // Polling REST: ajusta el endpoint según tu backend
-        // Por ejemplo, podrías necesitar un endpoint como /messages/receive?userId=...
-        // Aquí se deja como ejemplo, deberás adaptar la llamada real
-        while (true) {
-            // val messages = api.getNewMessages(userId) // <-- Implementa este método en NetworkApi y backend
-            // for (msg in messages) emit(msg)
-            kotlinx.coroutines.delay(5000) // Poll cada 5 segundos
+    /**
+     * Actualiza la ubicación del usuario en el servidor
+     */
+    override suspend fun updateUserLocation(userId: String, ipAddress: String, port: Int): Boolean {
+        return try {
+            val data = mapOf(
+                "user_id" to userId,
+                "ip_address" to ipAddress,
+                "port" to port,
+                "timestamp" to System.currentTimeMillis()
+            )
+            
+            val response = apiService.updateUserLocation(data)
+            
+            if (response.isSuccessful) {
+                Log.d(TAG, "Ubicación actualizada con éxito")
+                true
+            } else {
+                Log.w(TAG, "Error actualizando ubicación: ${response.code()} - ${response.message()}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en updateUserLocation: ${e.message}")
+            false
         }
     }
     
-    override suspend fun updateUserStatus(userId: String, online: Boolean): Boolean {
-        val request = UserStatusRequest(online)
-        val response = api.updateUserStatus(userId, request)
-        return response.success
+    /**
+     * Almacena un mensaje para entrega offline en el servidor
+     */
+    override suspend fun storeOfflineMessage(
+        senderId: String,
+        recipientUsername: String,
+        encryptedContent: String,
+        messageType: String,
+        timestamp: Long
+    ): Response<ServerResponse> {
+        val data = mapOf(
+            "sender_id" to senderId,
+            "recipient_username" to recipientUsername,
+            "encrypted_content" to encryptedContent,
+            "message_type" to messageType,
+            "timestamp" to timestamp
+        )
+        
+        return apiService.storeOfflineMessage(data)
     }
     
-    override suspend fun getOnlineUsers(): List<User> {
-        return api.getOnlineUsers()
+    /**
+     * Confirma la recepción de un mensaje
+     */
+    override suspend fun confirmMessageReceived(messageId: String): Boolean {
+        return try {
+            val data = mapOf("message_id" to messageId)
+            
+            val response = apiService.confirmMessageReceived(data)
+            
+            if (response.isSuccessful) {
+                Log.d(TAG, "Confirmación de recepción enviada para mensaje $messageId")
+                true
+            } else {
+                Log.w(TAG, "Error confirmando recepción: ${response.code()} - ${response.message()}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en confirmMessageReceived: ${e.message}")
+            false
+        }
+    }
+    
+    /**
+     * Marca un mensaje como leído en el servidor
+     */
+    override suspend fun markMessageRead(messageId: String): Boolean {
+        return try {
+            val data = mapOf("message_id" to messageId)
+            
+            val response = apiService.markMessageRead(data)
+            
+            if (response.isSuccessful) {
+                Log.d(TAG, "Mensaje $messageId marcado como leído en servidor")
+                true
+            } else {
+                Log.w(TAG, "Error marcando mensaje como leído: ${response.code()} - ${response.message()}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en markMessageRead: ${e.message}")
+            false
+        }
+    }
+    
+    /**
+     * Consulta el estado de entrega de varios mensajes
+     */
+    override suspend fun checkMessageStatus(messageIds: List<String>): Response<MessageStatusResponse> {
+        val data = mapOf("message_ids" to messageIds)
+        return apiService.checkMessageStatus(data)
+    }
+    
+    /**
+     * Notifica al servidor que un usuario está online
+     */
+    override suspend fun notifyUserOnline(username: String, ipAddress: String, port: Int): Response<ServerResponse> {
+        val data = mapOf(
+            "username" to username,
+            "ip_address" to ipAddress,
+            "port" to port,
+            "timestamp" to System.currentTimeMillis()
+        )
+        
+        return apiService.notifyUserOnline(data)
     }
 }
