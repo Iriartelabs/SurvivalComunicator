@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,45 +7,39 @@
     <fragment
         android:id="@+id/chatsFragment"
         android:name="com.survivalcomunicator.app.ui.chats.ChatsFragment"
-        android:label="Chats"
-        tools:layout="@layout/fragment_chats">
+        android:label="Chats">
         <action
             android:id="@+id/action_chats_to_chat"
             app:destination="@id/chatFragment" />
         <action
-            android:id="@+id/action_chats_to_contacts"
-            app:destination="@id/contactsFragment" />
+            android:id="@+id/action_chats_to_local_network"
+            app:destination="@id/localNetworkModeFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/chatFragment"
         android:name="com.survivalcomunicator.app.ui.chat.ChatFragment"
-        android:label="Chat"
-        tools:layout="@layout/fragment_chat">
+        android:label="Chat">
         <argument
             android:name="userId"
             app:argType="string" />
     </fragment>
-    
+
     <fragment
-        android:id="@+id/contactsFragment"
-        android:name="com.survivalcomunicator.app.ui.contacts.ContactsFragment"
-        android:label="Contactos"
-        tools:layout="@layout/fragment_contacts">
+        android:id="@+id/localNetworkModeFragment"
+        android:name="com.survivalcomunicator.app.ui.localnetwork.LocalNetworkModeFragment"
+        android:label="Local Network">
         <action
-            android:id="@+id/action_contacts_to_chat"
+            android:id="@+id/action_to_chat"
             app:destination="@id/chatFragment" />
     </fragment>
-
-    <fragment
-        android:id="@+id/walkieTalkieFragment"
-        android:name="com.survivalcomunicator.app.ui.walkietalkie.WalkieTalkieFragment"
-        android:label="Walkie-Talkie"
-        tools:layout="@layout/fragment_walkie_talkie" />
-
-    <fragment
-        android:id="@+id/settingsFragment"
-        android:name="com.survivalcomunicator.app.ui.settings.SettingsFragment"
-        android:label="Ajustes"
-        tools:layout="@layout/fragment_settings" />
+    
+    <activity
+        android:id="@+id/verificationActivity"
+        android:name="com.survivalcomunicator.app.ui.verification.VerificationActivity"
+        android:label="Verify Contact">
+        <argument
+            android:name="userId"
+            app:argType="string" />
+    </activity>
 </navigation>

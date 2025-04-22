@@ -1,9 +1,9 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("kotlin-kapt")
+    // Comentamos kapt temporalmente para simplificar
+    // id("kotlin-kapt")
     id("androidx.navigation.safeargs.kotlin")
-	id("org.jetbrains.kotlin.plugin.serialization") version "1.8.0"
 }
 
 android {
@@ -16,7 +16,6 @@ android {
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -31,66 +30,36 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
 
     buildFeatures {
         buildConfig = true
+        viewBinding = true
+        // Comentamos dataBinding temporalmente
+        // dataBinding = true
     }
 }
 
 dependencies {
-    // Core y UI de Android
+    // Solo dependencias básicas
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
     // Navegación
-    implementation("androidx.navigation:navigation-fragment-ktx:2.5.3")
-    implementation("androidx.navigation:navigation-ui-ktx:2.5.3")
-
-    // ViewModel y LiveData
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
-
-    // Comunicación en red
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:okhttp:4.10.0")
-
-    // Audio para funcionalidad walkie-talkie
-    implementation("androidx.media:media:1.6.0")
-
-    // Cifrado
-    implementation("net.zetetic:android-database-sqlcipher:4.5.3")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
-
-    // Base de datos local
-    implementation("androidx.room:room-runtime:2.5.1")
-    kapt("androidx.room:room-compiler:2.5.1")
-    implementation("androidx.room:room-ktx:2.5.1")
-
-    // Corrutinas de Kotlin
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    val navVersion = "2.5.3"
+    implementation("androidx.navigation:navigation-fragment-ktx:$navVersion")
+    implementation("androidx.navigation:navigation-ui-ktx:$navVersion")
 
     // Tests
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-	
-	// Ktor WebSocket
-	implementation("io.ktor:ktor-client-core:2.3.4")
-	implementation("io.ktor:ktor-client-cio:2.3.4")
-	implementation("io.ktor:ktor-client-websockets:2.3.4")
-
-	// Ktor + Kotlinx Serialization
-	implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
-implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-
 }

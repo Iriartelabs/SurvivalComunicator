@@ -1,12 +1,16 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
+    val kotlinVersion = "1.8.0"
+    extra["kotlin_version"] = kotlinVersion
+
     repositories {
         google()
         mavenCentral()
+        gradlePluginPortal()
     }
+
     dependencies {
-        classpath("com.android.tools.build:gradle:8.9.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        classpath("com.android.tools.build:gradle:8.0.0")
         classpath("androidx.navigation:navigation-safe-args-gradle-plugin:2.5.3")
     }
 }
